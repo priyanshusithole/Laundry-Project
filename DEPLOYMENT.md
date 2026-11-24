@@ -25,3 +25,5 @@ Seeded logins (password `password123`, or `SEED_PASSWORD`): student card ID `107
 ## Local development
 Start Postgres: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=hostel_laundry postgres:16`
 `backend`: `npm run seed` then `npm run dev` (port 5000). `frontend`: `npm run dev` (port 5173; Vite proxies `/api` to the backend).
+
+Staff self-registration: set the STAFF_SIGNUP_CODE env var; staff enter it as the 'Staff Access Code' when creating an admin account. If unset, staff signup is disabled.

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 
@@ -61,6 +62,58 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'Account already exists for this ID.' });
     }
     console.error('Registration error:', err);
+    res.status(500).json({ error: 'Server error during registration.' });
+  }
+});
+
+// POST /api/auth/register-staff (Staff registration, protected by a facility access code)
+router.post('/register-staff', async (req, res) => {
+  try {
+    const { employeeId, name, password, accessCode } = req.body;
+    const expected = process.env.STAFF_SIGNUP_CODE;
+    if (!expected) {
+      return res.status(403).json({ error: 'Staff self-registration is disabled.' });
+    }
+    const given = Buffer.from(String(accessCode || ''));
+    const want = Buffer.from(expected);
+    if (given.length !== want.length || !crypto.timingSafeEqual(given, want)) {
+      return res.status(403).json({ error: 'Invalid staff access code.' });
+    }
+    if (!employeeId || !employeeId.trim()) {
+      return res.status(400).json({ error: 'Employee ID is required.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const identifier = employeeId.trim().toUpperCase();
+    if (await User.findByIdentifier(identifier)) {
+      return res.status(409).json({ error: 'Account already exists for this Employee ID.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10));
+    const staff = await User.create({
+      role: 'staff',
+      identifier,
+      name: name && name.trim() ? name.trim() : identifier,
+      password: hashedPassword
+    });
+
+    const token = jwt.sign(
+      { id: staff.id, identifier: staff.identifier, role: staff.role },
+      getSecret(),
+      { expiresIn: '7d' }
+    );
+    res.status(201).json({
+      success: true,
+      token,
+      user: { role: staff.role, identifier: staff.identifier, name: staff.name }
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Account already exists for this Employee ID.' });
+    }
+    console.error('Staff registration error:', err);
     res.status(500).json({ error: 'Server error during registration.' });
   }
 });

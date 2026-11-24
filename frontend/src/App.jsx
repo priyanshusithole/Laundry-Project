@@ -65,6 +65,7 @@ export default function App() {
   const [adminRegisterEmpId, setAdminRegisterEmpId] = useState('');
   const [adminRegisterPassword, setAdminRegisterPassword] = useState('');
   const [adminRegisterConfirmPassword, setAdminRegisterConfirmPassword] = useState('');
+  const [adminAccessCode, setAdminAccessCode] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminRoleTitle, setAdminRoleTitle] = useState('Hostel Laundry Supervisor');
 
@@ -148,8 +149,37 @@ export default function App() {
         });
         finishLogin(data, 'Logged In', { designation: adminRoleTitle });
       } else {
-        // Staff accounts are provisioned by the facility, not self-registered
-        setFormError('Staff accounts are created by the facility administrator. Please sign in with your Employee ID.');
+        if (!adminRegisterEmpId.trim()) {
+          setFormError('Please enter your Employee ID.');
+          return;
+        }
+        if (!adminAccessCode.trim()) {
+          setFormError('Please enter the Staff Access Code issued by the facility.');
+          return;
+        }
+        if (!adminRegisterPassword) {
+          setFormError('Please create an admin password.');
+          return;
+        }
+        if (adminRegisterPassword.length < 6) {
+          setFormError('Admin password must contain at least 6 characters.');
+          return;
+        }
+        if (adminRegisterPassword !== adminRegisterConfirmPassword) {
+          setFormError('Passwords do not match.');
+          return;
+        }
+        setIsSubmitting(true);
+        const data = await apiRequest('/auth/register-staff', {
+          method: 'POST',
+          body: {
+            employeeId: adminRegisterEmpId.trim(),
+            name: adminName.trim(),
+            password: adminRegisterPassword,
+            accessCode: adminAccessCode.trim()
+          }
+        });
+        finishLogin(data, 'Account Created', { designation: adminRoleTitle.trim() });
       }
     } catch (err) {
       setFormError(err.message);
@@ -632,6 +662,22 @@ export default function App() {
                               value={adminRegisterEmpId}
                               onChange={(e) => setAdminRegisterEmpId(e.target.value)}
                               autoFocus
+                              required
+                            />
+                          </div>
+
+                          <div className="swiss-field">
+                            <label htmlFor="admin-reg-code" className="swiss-label">
+                              Staff Access Code <span className="req">*</span>
+                            </label>
+                            <input
+                              id="admin-reg-code"
+                              type="password"
+                              className="swiss-input"
+                              placeholder="Issued by the facility administrator"
+                              value={adminAccessCode}
+                              onChange={(e) => setAdminAccessCode(e.target.value)}
+                              autoComplete="off"
                               required
                             />
                           </div>
