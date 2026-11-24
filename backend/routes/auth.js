@@ -1,0 +1,108 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'hostel_laundry_jwt_secret_key_2026';
+
+// POST /api/auth/register (Student Registration)
+router.post('/register', async (req, res) => {
+  try {
+    const { cardId, usn, name, room, password } = req.body;
+    if (!cardId && !usn) {
+      return res.status(400).json({ error: 'Card ID or USN is required.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const identifier = (cardId || usn).trim().toUpperCase();
+    const existing = await User.findOne({ identifier });
+    if (existing) {
+      return res.status(409).json({ error: 'Account already exists for this ID.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      role: 'student',
+      identifier,
+      cardId: cardId ? cardId.trim() : identifier,
+      usn: usn ? usn.trim().toUpperCase() : `STD-${identifier}`,
+      name: name ? name.trim() : 'Resident Student',
+      room: room ? room.trim() : 'Wing 2 - Room 302',
+      password: hashedPassword
+    });
+
+    await newUser.save();
+
+    const token = jwt.sign(
+      { id: newUser._id, identifier: newUser.identifier, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        role: newUser.role,
+        identifier: newUser.identifier,
+        cardId: newUser.cardId,
+        usn: newUser.usn,
+        name: newUser.name,
+        room: newUser.room
+      }
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: 'Server error during registration.' });
+  }
+});
+
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
+  try {
+    const { role, identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Identifier and password are required.' });
+    }
+
+    const cleanId = identifier.trim().toUpperCase();
+    const user = await User.findOne({ identifier: cleanId, role: role || 'student' });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid ID or credentials.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid ID or credentials.' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, identifier: user.identifier, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        role: user.role,
+        identifier: user.identifier,
+        cardId: user.cardId,
+        usn: user.usn,
+        name: user.name,
+        room: user.room
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login.' });
+  }
+});
+
+module.exports = router;

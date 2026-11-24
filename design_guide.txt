@@ -1,0 +1,208 @@
+DESIGN SYSTEM REFERENCE
+Swiss / InternationalTypographic Style
+A reusable visual-design guide and implementation brief for digital products
+CORE IDEA
+Typography first. Precise grid. Generous whitespace. Neutral surfaces. Purposeful accents.
+Purpose  A project-agnostic reference for applying Swiss / International Typographic Style to websites, web applications, dashboards, landing pages, and other digital interfaces.
+How to reuse  Use the design principles as a baseline, then adapt the project context, routes, content, functionality, brand colors, and technical stack in the implementation prompt.
+1. Overview
+Swiss Style, also called the International Typographic Style, is a modernist graphic-design approach associated with clarity, objective communication, grid-based composition, sans-serif typography, and asymmetrical layouts. For digital products, it translates into interfaces that are orderly, readable, content-led, and visually consistent.
+This is a general-purpose style guide, not a specification for a particular industry or application. It should be adapted to the content, audience, brand, and functional requirements of each project.
+2. Core design principles
+Clarity over decoration: Every visual element should help users understand content or take an action.
+Grid-based structure: Use consistent columns, gutters, alignment, and layout rules.
+Typography-led hierarchy: Distinguish content through size, weight, line height, and spacing.
+Intentional whitespace: Create separation and emphasis through space rather than ornament.
+Purposeful asymmetry: Use asymmetrical composition when it improves hierarchy, rhythm, or editorial interest.
+Restrained color: Let neutrals carry the interface and use a limited accent palette deliberately.
+Consistency: Use shared tokens and reusable components throughout the product.
+Function before effect: Interactions, navigation, and data presentation must remain obvious and accessible.
+3. General visual direction
+Use a clean, editorial, modernist appearance rather than decorative or ornamental styling.
+Prefer left-aligned text and ragged-right text edges for readability.
+Use strong alignment and clear hierarchy instead of many competing visual treatments.
+Keep layouts calm and structured while allowing selective asymmetry.
+Treat color, borders, icons, and imagery as functional communication tools.
+Do not confuse Swiss Style with extreme minimalism: retain every element needed for usability and understanding.
+4. Color system
+A classic implementation uses black, white, and neutral greys with one deliberate accent color. Orange is one possible accent, not a required historical rule. Replace it with the project's brand color when appropriate.
+Token
+Example value
+Typical use
+White
+#FFFFFF
+Main canvas and surfaces
+Soft neutral
+#F5F5F3
+Optional page background
+Near black
+#171717
+Primary text and strong elements
+Slate grey
+#6B7280
+Secondary text
+Light grey
+#E5E7EB
+Borders and dividers
+Accent example
+#FF6B00
+Primary actions and emphasis
+Accent hover example
+#E85D00
+Hover/active accent state
+Accent tint example
+#FFF1E8
+Subtle selected surface
+Guidelines:
+Use the selected accent sparingly for key actions, links, active states, and important information.
+Use semantic status colors only when the product requires success, warning, error, or informational states.
+Do not use the example orange if it conflicts with the project's brand or content needs.
+Avoid unnecessary gradients, neon colors, competing accents, and decorative patterned backgrounds.
+Verify contrast for text, icons, borders, and controls.
+5. Typography
+Use a neutral sans-serif family with consistent weights. Inter is a practical digital default; Helvetica/Helvetica Neue, Arial, and IBM Plex Sans may also fit depending on licensing, availability, and brand needs.
+Role
+Size (guideline)
+Weight
+Use
+Display / hero heading
+48–64 px
+600–700
+Landing pages or prominent editorial statements
+Page title
+32–40 px
+600–700
+Main page heading
+Section heading
+22–28 px
+600
+Major content groups
+Card / component title
+16–20 px
+600
+Individual panels and content cards
+Body
+15–16 px
+400
+Main content
+Supporting text
+14 px
+400
+Descriptions and secondary content
+Labels / metadata
+12–13 px
+500
+Form labels, captions, timestamps
+Treat the scale as a starting point; adapt it to the device, content, and product context.
+Use a limited set of weights, typically 400, 500, 600, and 700.
+Use sentence case for most headings and navigation. Reserve uppercase for compact labels when useful.
+Maintain readable line lengths and comfortable body line heights.
+Use tabular numerals for data-heavy interfaces when available.
+Avoid unrelated font combinations, excessive letter spacing, and decorative text effects.
+6. Grid, spacing, and alignment
+Property
+General recommendation
+Desktop grid
+12 columns is a useful default for complex desktop layouts
+Maximum content width
+Approximately 1200–1440 px, depending on project
+Gutters
+Consistent; commonly 16–24 px
+Outer padding
+Desktop 32–48 px; tablet ~24 px; mobile ~16 px
+Section spacing
+32–48 px as a starting point
+Component padding
+16–24 px depending on density
+Spacing scale
+4, 8, 12, 16, 24, 32, 40, 48, 64, 80 px
+Use CSS Grid and Flexbox for layout. Do not position major page sections with arbitrary absolute coordinates. Align related elements to common grid lines. Asymmetry should be deliberate, not accidental.
+7. Surfaces and component patterns
+Element
+Guideline
+Cards and panels
+White or neutral surface; thin border; modest 4–8 px radius; minimal or no shadow.
+Buttons
+Clear hierarchy between primary, secondary, tertiary, and destructive actions.
+Inputs
+Labels above fields, consistent sizing, clear focus states, and readable validation.
+Navigation
+Simple labels, consistent alignment, restrained icons, and a visible active state.
+Tables and lists
+Clear alignment, readable row spacing, restrained dividers, and responsive behavior.
+Badges and status
+Use semantic color sparingly and pair it with readable text.
+Icons
+Use one coherent icon family and consistent stroke weight.
+Images
+Use only when they add meaning; avoid decorative imagery that competes with content.
+Motion
+Subtle transitions for state feedback; respect reduced-motion preferences.
+8. Interaction and accessibility
+Use semantic HTML and maintain a logical heading hierarchy.
+Make all interactive controls keyboard accessible with visible focus indicators.
+Provide accessible labels and meaningful names for buttons and icons.
+Ensure text and control contrast meets applicable accessibility standards.
+Do not rely on color alone to communicate errors, status, or selection.
+Provide loading, empty, error, disabled, and success states where relevant.
+Use restrained transitions, commonly around 120–200 ms, without distracting motion.
+Respect reduced-motion settings and ensure dialogs/menus are accessible.
+9. Responsive behavior
+Treat breakpoints as flexible guidelines; adapt them to the content and framework.
+Mobile: stack content, simplify navigation, and keep key actions reachable.
+Tablet: adjust columns and spacing; avoid forcing desktop layouts into narrow widths.
+Desktop: use grid structure and whitespace to create hierarchy.
+Wide screens: constrain content width so text and cards do not become excessively stretched.
+Prevent horizontal page overflow and ensure form controls fit the viewport.
+Transform dense tables into stacked layouts or deliberately scrollable regions when appropriate.
+10. Common mistakes to avoid
+Treating the style as simply a white background plus a sans-serif font.
+Using too many accent colors or relying on bright color for every action.
+Overusing uppercase labels, oversized headings, or exaggerated letter spacing.
+Applying the same card grid to every type of content even when another layout is clearer.
+Using decorative icons, shadows, gradients, or rounded pills without a functional reason.
+Making layouts asymmetrical at the expense of usability.
+Removing necessary details in the name of minimalism.
+Ignoring keyboard access, contrast, responsive behavior, or empty/error states.
+11. Reusable implementation prompt
+Copy this prompt into your coding agent after opening the target project. Replace the bracketed fields with project-specific information. Keep the general design rules and customize the implementation details.
+DESIGN SYSTEM IMPLEMENTATION BRIEF## Swiss / International Typographic Style
+PROJECT CONTEXTProject name: [PROJECT NAME]Project type: [WEBSITE / WEB APP / DASHBOARD / MOBILE APP / OTHER]Primary audience: [TARGET USERS]Main user goals: [KEY TASKS]Existing framework and stack: [FRAMEWORK / LANGUAGE / STYLING]Pages or routes in scope: [LIST PAGES OR ROUTES]Brand requirements: [LOGO, BRAND COLORS, OR “NONE PROVIDED”]Constraints: [ACCESSIBILITY, PERFORMANCE, BROWSER, OR OTHER REQUIREMENTS]
+ROLE AND OBJECTIVEAct as a senior product designer and frontend engineer. Inspect the existing project and implement a cohesive Swiss / International Typographic Style across the requested scope. The design should be clear, precise, typography-led, grid-based, and content-focused.
+Do not deliver only a visual proposal or static mockup. Implement the design in the existing project while preserving its working features.
+INSPECT BEFORE EDITINGInspect the repository, framework, routes, existing components, design tokens, styling approach, dependencies, data models, API integrations, and current behavior before making changes. Reuse existing conventions and components where practical. Do not migrate frameworks unnecessarily or remove existing functionality.
+DESIGN PRINCIPLES- Clarity over decoration.- Grid-based structure and deliberate alignment.- Typography-led hierarchy.- Generous but purposeful whitespace.- Restrained color and functional minimalism.- Purposeful asymmetry when it improves hierarchy.- Consistent reusable components and design tokens.- Accessibility and usability across screen sizes.
+COLOR SYSTEMUse a neutral base with one deliberate brand accent. Suggested starting tokens:- White: #FFFFFF- Soft neutral: #F5F5F3- Primary text: #171717- Secondary text: #6B7280- Border: #E5E7EB- Example accent: #FF6B00- Example accent hover: #E85D00- Example accent tint: #FFF1E8
+Treat the accent as configurable, not mandatory. If project brand colors are supplied, adapt the palette while preserving contrast and restraint. Use semantic status colors only where needed. Avoid gratuitous gradients, neon colors, and patterned backgrounds.
+TYPOGRAPHYUse a neutral sans-serif typeface such as Inter, Helvetica/Helvetica Neue, Arial, or IBM Plex Sans, subject to availability and project requirements. Establish a consistent responsive type scale:- Display: 48–64 px- Page title: 32–40 px- Section heading: 22–28 px- Component heading: 16–20 px- Body: 15–16 px- Supporting text: 14 px- Labels/metadata: 12–13 px
+Use a limited set of font weights, maintain readable line lengths and line heights, and use size/weight/spacing to create hierarchy. Avoid decorative text effects.
+GRID AND SPACINGUse a responsive grid appropriate to the content; a 12-column desktop grid is a useful default. Use consistent gutters, align related elements to shared grid lines, and apply a reusable spacing scale such as 4, 8, 12, 16, 24, 32, 40, 48, 64, and 80 px. Use CSS Grid and Flexbox. Avoid arbitrary absolute positioning for primary structure. Keep content widths readable.
+COMPONENTSCreate or refactor reusable components appropriate to this project, such as layout containers, navigation, page headers, buttons, form fields, cards, tables/lists, tabs, status labels, dialogs, notifications, empty states, and loading/error states. Use shared tokens and variants instead of duplicating styles.
+Use thin borders, modest corner radii, minimal shadows, clear button hierarchy, visible focus states, consistent iconography, and restrained motion. Every visible control must perform its advertised action.
+PROJECT-SPECIFIC PAGE REQUIREMENTSUse the page list and user goals supplied above. For every relevant page, preserve its purpose and working behavior. Define a clear hierarchy, primary action, content layout, responsive behavior, and necessary loading, empty, error, and success states. Use actual project data; do not invent records or metrics to fill empty space.
+RESPONSIVE DESIGNAdapt the interface for mobile, tablet, desktop, and wide screens. Simplify navigation where needed, stack content when appropriate, keep controls within the viewport, and avoid horizontal page overflow. Do not merely shrink the desktop design; adapt it to the available space.
+ACCESSIBILITYUse semantic HTML, logical heading hierarchy, labeled controls, keyboard-accessible navigation, visible focus indicators, sufficient contrast, meaningful icon labels, and accessible dialogs. Do not rely on color alone to communicate status. Respect reduced-motion preferences.
+TECHNICAL CONSTRAINTSUse the existing framework, build setup, and styling conventions unless a justified change is necessary. Avoid unnecessary dependencies. Preserve routes, authentication, API calls, data models, and business logic. Do not expose secrets or private environment variables. Do not leave placeholder links or nonfunctional controls. Do not claim an operation succeeded unless it actually did.
+VALIDATIONRun the available build, lint, and type checks. Inspect all changed routes and test relevant interactions. Check responsive layouts, alignment, typography, contrast, and empty/error/loading states. If browser preview or screenshots are available, inspect the rendered result and fix visible issues. Report accurately which checks were run and any remaining limitations.
+DEFINITION OF DONEThe requested scope consistently follows the design system; typography, grid, spacing, and components are coherent; the accent is restrained; the interface is responsive and accessible; existing functionality remains intact; and available quality checks pass.
+Final direction: create a professional, modernist, editorial interface defined by clear typography, precise alignment, structured grids, intentional whitespace, neutral surfaces, thin dividers, and purposeful color. Prioritize clarity and usability over decoration.
+12. Suggested workflow for applying the style
+Step 1 — Audit: Inspect the existing product, user needs, routes, content, and technical constraints.
+Step 2 — Foundation: Define color tokens, typography, spacing, grid, and reusable component variants.
+Step 3 — Implement: Apply the design system to the pages and flows in scope.
+Step 4 — Review: Inspect actual rendered pages and correct hierarchy, spacing, alignment, and responsive issues.
+Step 5 — Verify: Test interactions, accessibility basics, existing behavior, and available build/lint/type checks.
+13. Reusable project handoff checklist
+☐ Project name, audience, and key user goals are specified.
+☐ Pages and routes in scope are identified.
+☐ Existing framework and technical constraints are documented.
+☐ Brand colors and logo requirements are identified or explicitly left open.
+☐ Shared typography, color, spacing, and component tokens are defined.
+☐ Grid and responsive behavior are specified.
+☐ Forms, buttons, navigation, and other controls have clear behaviors.
+☐ Loading, empty, error, disabled, and success states are considered.
+☐ Accessibility and keyboard interaction have been reviewed.
+☐ Existing application behavior is preserved.
+☐ Available build and quality checks are run and reported accurately.
+14. Final reference
+Swiss / International Typographic Style is best understood as a system of visual decisions rather than a fixed theme preset. Its recognizable qualities come from consistent typography, grid discipline, alignment, hierarchy, whitespace, and restrained color. Adapt the exact palette, layout density, components, and content to each project's audience and purpose while preserving those principles.
