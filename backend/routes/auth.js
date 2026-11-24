@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
     }
 
     const identifier = (cardId || usn).trim().toUpperCase();
-    const existing = await User.findByIdentifier(identifier);
+    const existing = await User.findByIdentifier(identifier, 'student');
     if (existing) {
       return res.status(409).json({ error: 'Account already exists for this ID.' });
     }
@@ -87,7 +87,7 @@ router.post('/register-staff', async (req, res) => {
     }
 
     const identifier = employeeId.trim().toUpperCase();
-    if (await User.findByIdentifier(identifier)) {
+    if (await User.findByIdentifier(identifier, 'staff')) {
       return res.status(409).json({ error: 'Account already exists for this Employee ID.' });
     }
 

@@ -34,7 +34,7 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'staff')),
-  identifier TEXT NOT NULL UNIQUE,
+  identifier TEXT NOT NULL,
   card_id TEXT,
   usn TEXT,
   name TEXT NOT NULL,
@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS users (
   annual_wash_quota INTEGER NOT NULL DEFAULT 30,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- An ID only has to be unique within a role (a student USN and a staff Employee ID may match)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_identifier_key;
+CREATE UNIQUE INDEX IF NOT EXISTS users_role_identifier_idx ON users (role, identifier);
 CREATE INDEX IF NOT EXISTS users_usn_idx ON users (usn);
 
 CREATE TABLE IF NOT EXISTS bags (

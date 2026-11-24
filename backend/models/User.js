@@ -29,8 +29,8 @@ async function findStudentForLogin(cleanId, rawId) {
   return toUser(rows[0]);
 }
 
-async function findByIdentifier(identifier) {
-  const { rows } = await query('SELECT * FROM users WHERE identifier = $1', [identifier]);
+async function findByIdentifier(identifier, role) {
+  const { rows } = await query('SELECT * FROM users WHERE identifier = $1 AND role = $2', [identifier, role]);
   return toUser(rows[0]);
 }
 
