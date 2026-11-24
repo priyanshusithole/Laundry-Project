@@ -1,7 +1,7 @@
 /**
  * Hostel Laundry Management System - Shared Data Store
  * Manages active bags, 7-stage workflow, and past laundry records.
- * Synchronizes with localStorage for persistent real-time simulation.
+ * Backed by the Express/MongoDB API (see the API-backed store section below).
  */
 
 export const LAUNDRY_STAGES = [
@@ -56,210 +56,111 @@ export function findStudent(identifier) {
   };
 }
 
-const INITIAL_BAGS = [
-  {
-    id: '1077-2',
-    washId: '1077-2',
-    cardId: '1077',
-    washNumber: 2,
-    qrCode: 'HL-1077-2',
-    usn: 'ENG24CY0189',
-    studentName: 'Alex Morgan',
-    room: 'Wing 2 - Room 302',
-    stage: 'Washing',
-    totalItems: 8,
-    itemBreakdown: {
-      shirts: 3,
-      trousers: 2,
-      towels: 2,
-      bedding: 1
-    },
-    weightKg: 3.8,
-    submittedAt: 'Today, 09:30 AM',
-    expectedAt: 'Today, 04:30 PM',
-    assignedStaff: 'Marcus Vance (EMP-9042)',
-    notes: 'Standard eco-wash, mild detergent requested',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: 'Today, 09:30 AM', note: 'Dropped off by resident (Card ID 1077)' },
-      { stage: 'Received', timestamp: 'Today, 09:45 AM', note: 'Barcoded as Wash ID 1077-2 by intake staff' },
-      { stage: 'Washing', timestamp: 'Today, 10:15 AM', note: 'Washing cycle in progress' }
-    ]
-  },
-  {
-    id: '1042-1',
-    washId: '1042-1',
-    cardId: '1042',
-    washNumber: 1,
-    qrCode: 'HL-1042-1',
-    usn: 'ENG24CS0142',
-    studentName: 'Priya Sharma',
-    room: 'Wing 1 - Room 104',
-    stage: 'Ironing/Folding',
-    totalItems: 6,
-    itemBreakdown: {
-      shirts: 4,
-      trousers: 2
-    },
-    weightKg: 2.4,
-    submittedAt: 'Today, 08:15 AM',
-    expectedAt: 'Today, 02:30 PM',
-    assignedStaff: 'Elena Rostova (EMP-9045)',
-    notes: 'Steam press for formal shirts',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: 'Today, 08:15 AM', note: 'Intake scanned (Card ID 1042)' },
-      { stage: 'Received', timestamp: 'Today, 08:30 AM', note: 'Sorted by staff' },
-      { stage: 'Washing', timestamp: 'Today, 09:00 AM', note: 'Wash cycle completed' },
-      { stage: 'Drying', timestamp: 'Today, 10:30 AM', note: 'Dryer cycle completed' },
-      { stage: 'Ironing/Folding', timestamp: 'Today, 11:45 AM', note: 'Ironing and folding underway' }
-    ]
-  },
-  {
-    id: '1088-1',
-    washId: '1088-1',
-    cardId: '1088',
-    washNumber: 1,
-    qrCode: 'HL-1088-1',
-    usn: 'ENG24EC0088',
-    studentName: 'Rahul Verma',
-    room: 'Wing 3 - Room 210',
-    stage: 'Ready for Collection',
-    totalItems: 10,
-    itemBreakdown: {
-      shirts: 5,
-      trousers: 3,
-      hoodies: 2
-    },
-    weightKg: 4.5,
-    submittedAt: 'Yesterday, 03:00 PM',
-    expectedAt: 'Today, 11:30 AM',
-    readyAt: 'Today, 11:15 AM',
-    pickupBin: 'Counter Bay 14 (Wing 2 Desk)',
-    assignedStaff: 'Marcus Vance (EMP-9042)',
-    notes: 'Packaged in clean recycled poly-bag',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: 'Yesterday, 03:00 PM', note: 'Intake deposit logged (Card ID 1088)' },
-      { stage: 'Received', timestamp: 'Yesterday, 03:30 PM', note: 'Staff verified' },
-      { stage: 'Washing', timestamp: 'Yesterday, 04:30 PM', note: 'Wash cycle completed' },
-      { stage: 'Drying', timestamp: 'Yesterday, 06:00 PM', note: 'Dryer cycle completed' },
-      { stage: 'Ironing/Folding', timestamp: 'Today, 09:30 AM', note: 'Folded & tagged' },
-      { stage: 'Ready for Collection', timestamp: 'Today, 11:15 AM', note: 'Placed in Counter Bay 14' }
-    ]
-  },
-  {
-    id: '1098-1',
-    washId: '1098-1',
-    cardId: '1098',
-    washNumber: 1,
-    qrCode: 'HL-1098-1',
-    usn: 'ENG24ME0098',
-    studentName: 'Karan Patel',
-    room: 'Wing 2 - Room 108',
-    stage: 'Drying',
-    totalItems: 7,
-    itemBreakdown: {
-      shirts: 3,
-      jeans: 2,
-      towels: 2
-    },
-    weightKg: 3.2,
-    submittedAt: 'Today, 10:00 AM',
-    expectedAt: 'Today, 05:00 PM',
-    assignedStaff: 'Marcus Vance (EMP-9042)',
-    notes: 'Standard wash & dry',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: 'Today, 10:00 AM', note: 'Deposit logged (Card ID 1098)' },
-      { stage: 'Received', timestamp: 'Today, 10:20 AM', note: 'Intake verified' },
-      { stage: 'Washing', timestamp: 'Today, 10:50 AM', note: 'Cycle completed' },
-      { stage: 'Drying', timestamp: 'Today, 11:55 AM', note: 'Dryer cycle running' }
-    ]
-  },
-  {
-    id: '1051-1',
-    washId: '1051-1',
-    cardId: '1051',
-    washNumber: 1,
-    qrCode: 'HL-1051-1',
-    usn: 'ENG24IT0051',
-    studentName: 'Tanvi Deshmukh',
-    room: 'Wing 1 - Room 308',
-    stage: 'Submitted',
-    totalItems: 5,
-    itemBreakdown: {
-      tshirts: 3,
-      trousers: 2
-    },
-    weightKg: 2.1,
-    submittedAt: 'Today, 11:30 AM',
-    expectedAt: 'Tomorrow, 10:00 AM',
-    assignedStaff: 'Unassigned',
-    notes: 'Awaiting intake verification',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: 'Today, 11:30 AM', note: 'Bag intake registered (Card ID 1051)' }
-    ]
-  },
-  {
-    id: '1077-1',
-    washId: '1077-1',
-    cardId: '1077',
-    washNumber: 1,
-    qrCode: 'HL-1077-1',
-    usn: 'ENG24CY0189',
-    studentName: 'Alex Morgan',
-    room: 'Wing 2 - Room 302',
-    stage: 'Collected',
-    totalItems: 9,
-    itemBreakdown: {
-      shirts: 4,
-      jeans: 2,
-      towels: 3
-    },
-    weightKg: 4.1,
-    submittedAt: '03 Nov 2026, 09:15 AM',
-    expectedAt: '03 Nov 2026, 04:30 PM',
-    readyAt: '03 Nov 2026, 03:50 PM',
-    collectedAt: '03 Nov 2026, 06:10 PM',
-    assignedStaff: 'Marcus Vance (EMP-9042)',
-    notes: 'First wash cycle of academic year completed smoothly',
-    stageHistory: [
-      { stage: 'Submitted', timestamp: '03 Nov 2026, 09:15 AM', note: 'Deposit logged for Card ID 1077' },
-      { stage: 'Received', timestamp: '03 Nov 2026, 09:30 AM', note: 'Verified by staff as Wash ID 1077-1' },
-      { stage: 'Washing', timestamp: '03 Nov 2026, 10:00 AM', note: 'Wash cycle' },
-      { stage: 'Drying', timestamp: '03 Nov 2026, 11:30 AM', note: 'Dryer cycle' },
-      { stage: 'Ironing/Folding', timestamp: '03 Nov 2026, 02:00 PM', note: 'Pressed' },
-      { stage: 'Ready for Collection', timestamp: '03 Nov 2026, 03:50 PM', note: 'Counter notification sent' },
-      { stage: 'Collected', timestamp: '03 Nov 2026, 06:10 PM', note: 'Handed over to resident Alex Morgan' }
-    ]
-  }
-];
+// ---------------------------------------------------------------------------
+// API-backed store
+// The backend (Express + MongoDB) is the source of truth. This module keeps an in-memory cache of the
+// bags the signed-in user may see, so the dashboards can keep reading synchronously. Writes are applied
+// optimistically, sent to the API in order, and then reconciled with the server's response.
+// ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'hostel_laundry_bags_store_v5';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+const TOKEN_KEY = 'hostel_laundry_token';
+const POLL_MS = 10000;
 
-export function getBags() {
+let bagCache = [];
+let serverActiveCount = null;
+let writeQueue = Promise.resolve();
+
+export function getToken() {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+
+export function setSessionToken(token) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_BAGS));
-      return INITIAL_BAGS;
-    }
-    const parsed = JSON.parse(raw);
-    return parsed.map(b => ({
-      ...b,
-      room: normalizeWing(b.room),
-      pickupBin: normalizeWing(b.pickupBin)
-    }));
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+export function clearSession() {
+  setSessionToken(null);
+  bagCache = [];
+  serverActiveCount = null;
+  notify();
+}
+
+function notify() {
+  window.dispatchEvent(new CustomEvent('laundry_store_updated', { detail: bagCache }));
+}
+
+export async function apiRequest(path, { method = 'GET', body } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new Error('Cannot reach the server. Check your connection and try again.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function normalizeBag(b) {
+  return {
+    ...b,
+    id: b.washId || b.id || b._id,
+    room: normalizeWing(b.room),
+    pickupBin: normalizeWing(b.pickupBin)
+  };
+}
+
+function upsertBag(bag) {
+  const n = normalizeBag(bag);
+  const i = bagCache.findIndex(b => b.id === n.id);
+  bagCache = i === -1 ? [n, ...bagCache] : bagCache.map((b, idx) => (idx === i ? n : b));
+}
+
+/** Fetch the latest bags (and facility traffic) from the API into the cache. */
+export async function loadStore() {
+  if (!getToken()) return;
+  try {
+    const [bags, traffic] = await Promise.all([
+      apiRequest('/bags'),
+      apiRequest('/telemetry/traffic').catch(() => null)
+    ]);
+    bagCache = bags.map(normalizeBag);
+    serverActiveCount = traffic ? traffic.activeCount : null;
+    notify();
   } catch (err) {
-    console.error('Error reading bags from localStorage:', err);
-    return INITIAL_BAGS;
+    if (err.status === 401) {
+      window.dispatchEvent(new CustomEvent('laundry_session_expired'));
+    } else {
+      console.error('Failed to load laundry data:', err);
+    }
   }
 }
 
-export function saveBags(bags) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bags));
-    window.dispatchEvent(new CustomEvent('laundry_store_updated', { detail: bags }));
-  } catch (err) {
-    console.error('Error saving bags to localStorage:', err);
-  }
+/** Load now and keep refreshing so several users see each other's changes. Returns a stop function. */
+export function startStorePolling() {
+  loadStore();
+  const timer = setInterval(() => { if (!document.hidden) loadStore(); }, POLL_MS);
+  return () => clearInterval(timer);
+}
+
+function enqueueWrite(task) {
+  writeQueue = writeQueue.then(task, task);
+  return writeQueue;
+}
+
+export function getBags() {
+  return bagCache;
 }
 
 export function getBagById(bagId) {
@@ -386,8 +287,23 @@ export function advanceBagStage(bagId, targetStage, customNote = '') {
     updatedBag.collectedAt = nowString;
   }
 
-  bags[index] = updatedBag;
-  saveBags(bags);
+  bagCache = bags.map((b, i) => (i === index ? updatedBag : b));
+  notify();
+
+  enqueueWrite(async () => {
+    try {
+      const saved = await apiRequest(`/bags/${encodeURIComponent(currentBag.washId || currentBag.id)}/stage`, {
+        method: 'PATCH',
+        body: { stage: nextStage, note: customNote || undefined }
+      });
+      upsertBag(saved);
+      notify();
+    } catch (err) {
+      console.error('Stage update failed:', err);
+      window.dispatchEvent(new CustomEvent('laundry_store_error', { detail: err.message }));
+      await loadStore(); // roll back to the server's truth
+    }
+  });
   return updatedBag;
 }
 
@@ -439,8 +355,32 @@ export function submitNewBag({ cardId, usn, studentName, room, totalItems, itemB
     ]
   };
 
-  const updatedBags = [newBag, ...bags];
-  saveBags(updatedBags);
+  bagCache = [newBag, ...bags];
+  notify();
+
+  enqueueWrite(async () => {
+    try {
+      const saved = await apiRequest('/bags', {
+        method: 'POST',
+        body: {
+          cardId: resolvedCardId,
+          usn: resolvedUsn,
+          studentName: resolvedName,
+          room: resolvedRoom,
+          totalItems: newBag.totalItems,
+          notes: newBag.notes
+        }
+      });
+      // The server assigns the real wash number / ID; swap the optimistic record for it
+      bagCache = bagCache.filter(b => b.id !== newBag.id);
+      upsertBag(saved);
+      notify();
+    } catch (err) {
+      console.error('Bag submission failed:', err);
+      window.dispatchEvent(new CustomEvent('laundry_store_error', { detail: err.message }));
+      await loadStore();
+    }
+  });
   return newBag;
 }
 
@@ -455,7 +395,8 @@ export function submitNewBag({ cardId, usn, studentName, room, totalItems, itemB
 export function getFacilityTraffic(overrideLevel = null) {
   const bags = getBags();
   const activeBags = bags.filter(b => b.stage !== 'Collected');
-  const count = activeBags.length;
+  // Students only receive their own bags, so use the facility-wide count reported by the server
+  const count = serverActiveCount !== null ? serverActiveCount : activeBags.length;
 
   let trafficLevel = 'Low Traffic';
   let trafficClass = 'low';

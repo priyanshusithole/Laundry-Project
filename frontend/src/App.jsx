@@ -1,16 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import hostelLaundryImg from './assets/hostel-laundry-bg.jpg';
 import cartoonWasherImg from './assets/cartoon-washing-machine.png';
 import StudentDashboard from './components/StudentDashboard';
 import StaffDashboard from './components/StaffDashboard';
-import { findStudent } from './utils/laundryStore';
+import { apiRequest, setSessionToken, clearSession, getToken } from './utils/laundryStore';
+
+const USER_KEY = 'hostel_laundry_user';
+
+function readSavedUser() {
+  try {
+    if (!getToken()) return null;
+    return JSON.parse(localStorage.getItem(USER_KEY));
+  } catch {
+    return null;
+  }
+}
+
+// Map the API's user object to the shape the dashboards expect
+function toActiveUser(apiUser, mode, extra = {}) {
+  if (apiUser.role === 'staff') {
+    return {
+      role: 'admin',
+      identifier: apiUser.identifier,
+      name: apiUser.name,
+      designation: extra.designation || 'Facility Supervisor',
+      mode
+    };
+  }
+  return {
+    role: 'student',
+    cardId: apiUser.cardId || apiUser.identifier,
+    identifier: apiUser.usn || apiUser.identifier,
+    name: apiUser.name,
+    room: apiUser.room,
+    mode
+  };
+}
 
 export default function App() {
   // Roles and Navigation State
   const [activeRole, setActiveRole] = useState('student'); // 'student' | 'admin'
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
-  const [activeUser, setActiveUser] = useState(null);
+  const [activeUser, setActiveUser] = useState(readSavedUser);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCycleActive, setIsCycleActive] = useState(false);
 
   // Password Visibility
@@ -19,7 +52,7 @@ export default function App() {
 
   // Form Fields - Student (Pre-configured for demo Card ID: 1077)
   const [studentId, setStudentId] = useState('1077');
-  const [studentPassword, setStudentPassword] = useState('hostel123');
+  const [studentPassword, setStudentPassword] = useState('password123');
   const [studentRegisterUsn, setStudentRegisterUsn] = useState('');
   const [studentRegisterPassword, setStudentRegisterPassword] = useState('');
   const [studentRegisterConfirmPassword, setStudentRegisterConfirmPassword] = useState('');
@@ -38,60 +71,68 @@ export default function App() {
   // Form Status Feedback
   const [formError, setFormError] = useState('');
 
-  // Handle Form Submission
-  const handleSubmit = (e) => {
+  const finishLogin = (data, mode, extra) => {
+    const user = toActiveUser(data.user, mode, extra);
+    setSessionToken(data.token);
+    try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch { /* storage unavailable */ }
+    setActiveUser(user);
+  };
+
+  // Handle Form Submission (talks to the Express API)
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setFormError('');
 
-    if (activeRole === 'student') {
-      if (authMode === 'login') {
-        if (!studentId.trim()) {
-          setFormError('Please enter your Permanent Card ID or USN.');
-          return;
+    try {
+      if (activeRole === 'student') {
+        if (authMode === 'login') {
+          if (!studentId.trim()) {
+            setFormError('Please enter your Permanent Card ID or USN.');
+            return;
+          }
+          if (!studentPassword) {
+            setFormError('Please enter your password.');
+            return;
+          }
+          setIsSubmitting(true);
+          const data = await apiRequest('/auth/login', {
+            method: 'POST',
+            body: { role: 'student', identifier: studentId.trim(), password: studentPassword }
+          });
+          finishLogin(data, 'Logged In');
+        } else {
+          if (!studentRegisterUsn.trim()) {
+            setFormError('Please enter your Permanent Card ID or University Seat Number (USN).');
+            return;
+          }
+          if (!studentRegisterPassword) {
+            setFormError('Please create a password.');
+            return;
+          }
+          if (studentRegisterPassword.length < 6) {
+            setFormError('Password must contain at least 6 characters.');
+            return;
+          }
+          if (studentRegisterPassword !== studentRegisterConfirmPassword) {
+            setFormError('Passwords do not match. Please verify.');
+            return;
+          }
+          setIsSubmitting(true);
+          const id = studentRegisterUsn.trim();
+          const data = await apiRequest('/auth/register', {
+            method: 'POST',
+            body: {
+              cardId: /^\d+$/.test(id) ? id : undefined,
+              usn: /^\d+$/.test(id) ? undefined : id,
+              name: studentName.trim(),
+              room: studentRoom.trim(),
+              password: studentRegisterPassword
+            }
+          });
+          finishLogin(data, 'Account Created');
         }
-        if (!studentPassword) {
-          setFormError('Please enter your password.');
-          return;
-        }
-        const studentInfo = findStudent(studentId.trim());
-        setActiveUser({
-          role: 'student',
-          cardId: studentInfo?.cardId || studentId.trim(),
-          identifier: studentInfo?.usn || studentId.trim().toUpperCase(),
-          name: studentInfo?.name || studentName || 'Alex Morgan',
-          room: studentInfo?.room || studentRoom || 'Wing 2 - Room 302',
-          mode: 'Logged In'
-        });
-      } else {
-        if (!studentRegisterUsn.trim()) {
-          setFormError('Please enter your Permanent Card ID or University Seat Number (USN).');
-          return;
-        }
-        if (!studentRegisterPassword) {
-          setFormError('Please create a password.');
-          return;
-        }
-        if (studentRegisterPassword.length < 6) {
-          setFormError('Password must contain at least 6 characters.');
-          return;
-        }
-        if (studentRegisterPassword !== studentRegisterConfirmPassword) {
-          setFormError('Passwords do not match. Please verify.');
-          return;
-        }
-        const studentInfo = findStudent(studentRegisterUsn.trim());
-        setActiveUser({
-          role: 'student',
-          cardId: studentInfo?.cardId || studentRegisterUsn.trim(),
-          identifier: studentInfo?.usn || studentRegisterUsn.trim().toUpperCase(),
-          name: studentName.trim() || studentInfo?.name || studentRegisterUsn.trim().toUpperCase(),
-          room: studentRoom.trim() || studentInfo?.room || 'Wing 2 - Room 302',
-          mode: 'Account Created'
-        });
-      }
-    } else {
-      // Admin Role
-      if (authMode === 'login') {
+      } else if (authMode === 'login') {
         if (!adminEmployeeId.trim()) {
           setFormError('Please enter your Employee ID.');
           return;
@@ -100,45 +141,39 @@ export default function App() {
           setFormError('Please enter your admin password.');
           return;
         }
-        setActiveUser({
-          role: 'admin',
-          identifier: adminEmployeeId.trim().toUpperCase(),
-          name: adminName || 'Marcus Vance',
-          designation: adminRoleTitle || 'Facility Supervisor',
-          mode: 'Logged In'
+        setIsSubmitting(true);
+        const data = await apiRequest('/auth/login', {
+          method: 'POST',
+          body: { role: 'staff', identifier: adminEmployeeId.trim(), password: adminPassword }
         });
+        finishLogin(data, 'Logged In', { designation: adminRoleTitle });
       } else {
-        if (!adminRegisterEmpId.trim()) {
-          setFormError('Please enter your Employee ID.');
-          return;
-        }
-        if (!adminRegisterPassword) {
-          setFormError('Please create an admin password.');
-          return;
-        }
-        if (adminRegisterPassword.length < 6) {
-          setFormError('Admin password must contain at least 6 characters.');
-          return;
-        }
-        if (adminRegisterPassword !== adminRegisterConfirmPassword) {
-          setFormError('Passwords do not match.');
-          return;
-        }
-        setActiveUser({
-          role: 'admin',
-          identifier: adminRegisterEmpId.trim().toUpperCase(),
-          name: adminName.trim() || adminRegisterEmpId.trim().toUpperCase(),
-          designation: adminRoleTitle.trim() || 'Hostel Facility Warden',
-          mode: 'Account Created'
-        });
+        // Staff accounts are provisioned by the facility, not self-registered
+        setFormError('Staff accounts are created by the facility administrator. Please sign in with your Employee ID.');
       }
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleSignOut = () => {
+    clearSession();
+    try { localStorage.removeItem(USER_KEY); } catch { /* storage unavailable */ }
     setActiveUser(null);
     setIsCycleActive(false);
   };
+
+  // If the server says the session expired, drop back to the sign-in screen
+  useEffect(() => {
+    const onExpired = () => {
+      handleSignOut();
+      setFormError('Your session expired. Please sign in again.');
+    };
+    window.addEventListener('laundry_session_expired', onExpired);
+    return () => window.removeEventListener('laundry_session_expired', onExpired);
+  }, []);
 
   const handleStartCycle = () => {
     setIsCycleActive(true);

@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { LaundryBag, LAUNDRY_STAGES } = require('../models/LaundryBag');
-const User = require('../models/User');
+const { requireAuth, requireStaff } = require('../middleware/auth');
+
+router.use(requireAuth);
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Students can only see/act on their own bags; staff can access everything
+const canAccessCard = (req, cardId) => req.user.role === 'staff' || req.user.identifier === String(cardId).toUpperCase();
 
 // Helper to calculate next stage
 function getNextStage(current) {
@@ -24,12 +31,15 @@ router.get('/', async (req, res) => {
       }
     }
 
-    if (cardId) {
+    if (req.user.role !== 'staff') {
+      // Students only ever see their own bags
+      query.cardId = req.user.identifier;
+    } else if (cardId) {
       query.cardId = cardId.toString().trim();
     }
 
     if (search) {
-      const regex = new RegExp(search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(search.trim()), 'i');
       query.$or = [
         { washId: regex },
         { studentName: regex },
@@ -65,7 +75,7 @@ router.get('/:id', async (req, res) => {
       bag = await LaundryBag.findById(queryId);
     }
 
-    if (!bag) {
+    if (!bag || !canAccessCard(req, bag.cardId)) {
       return res.status(404).json({ error: `No laundry bag record found matching "${queryId}".` });
     }
 
@@ -80,7 +90,13 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { cardId, usn, studentName, room, totalItems, notes } = req.body;
-    const effectiveCardId = (cardId || '1077').toString().trim();
+    // Students can only submit for their own card; staff submit on behalf of a student at the counter
+    const effectiveCardId = req.user.role === 'staff'
+      ? (cardId || '').toString().trim()
+      : req.user.identifier;
+    if (!effectiveCardId) {
+      return res.status(400).json({ error: 'Card ID is required.' });
+    }
 
     // Count existing washes for this student's card
     const existingCount = await LaundryBag.countDocuments({ cardId: effectiveCardId });
@@ -97,7 +113,7 @@ router.post('/', async (req, res) => {
     expDate.setHours(expDate.getHours() + 6);
     const expectedString = 'Today, ' + expDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const count = parseInt(totalItems, 10) || 5;
+    const count = Math.min(30, Math.max(1, parseInt(totalItems, 10) || 5));
 
     const newBag = new LaundryBag({
       washId,
@@ -133,12 +149,17 @@ router.post('/', async (req, res) => {
 });
 
 // PATCH /api/bags/:id/stage (Advance stage)
-router.patch('/:id/stage', async (req, res) => {
+router.patch('/:id/stage', requireStaff, async (req, res) => {
   try {
     const { stage, note } = req.body;
     const bagId = req.params.id.trim();
 
-    let bag = await LaundryBag.findOne({ washId: bagId }) || await LaundryBag.findById(bagId);
+    if (stage && !LAUNDRY_STAGES.includes(stage)) {
+      return res.status(400).json({ error: `Invalid stage "${stage}".` });
+    }
+
+    let bag = await LaundryBag.findOne({ washId: bagId });
+    if (!bag && /^[0-9a-fA-F]{24}$/.test(bagId)) bag = await LaundryBag.findById(bagId);
     if (!bag) {
       return res.status(404).json({ error: 'Laundry bag not found.' });
     }

@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { LaundryBag } = require('../models/LaundryBag');
+const { requireAuth, requireStaff } = require('../middleware/auth');
+
+router.use(requireAuth);
 
 // GET /api/telemetry/metrics (KPI Cards for Staff Dashboard)
-router.get('/metrics', async (req, res) => {
+router.get('/metrics', requireStaff, async (req, res) => {
   try {
     const allBags = await LaundryBag.find();
     const activeBags = allBags.filter(b => b.stage !== 'Collected');

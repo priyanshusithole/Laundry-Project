@@ -171,7 +171,7 @@ async function seed() {
     await LaundryBag.deleteMany({});
     console.log('[SEED] Cleared existing users and bags.');
 
-    const defaultPass = await bcrypt.hash('password123', 10);
+    const defaultPass = await bcrypt.hash(process.env.SEED_PASSWORD || 'password123', 10);
 
     for (const s of SEED_STUDENTS) {
       await User.create({

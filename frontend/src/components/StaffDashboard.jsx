@@ -6,6 +6,7 @@ import {
   LAUNDRY_STAGES,
   TOTAL_ANNUAL_WASHES,
   getBags,
+  startStorePolling,
   getBagById,
   advanceBagStage,
   submitNewBag,
@@ -55,6 +56,20 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
 
   // Admin QR Code Print & Generation Modal
   const [qrPrintModalBag, setQrPrintModalBag] = useState(null);
+
+  // Pull live data from the API and keep it fresh; surface background save failures
+  useEffect(() => {
+    const stop = startStorePolling();
+    const onError = (e) => {
+      setActionFeedback(`Could not save change: ${e.detail}`);
+      setTimeout(() => setActionFeedback(''), 6000);
+    };
+    window.addEventListener('laundry_store_error', onError);
+    return () => {
+      stop();
+      window.removeEventListener('laundry_store_error', onError);
+    };
+  }, []);
 
   // Load latest data from store
   const refreshData = () => {

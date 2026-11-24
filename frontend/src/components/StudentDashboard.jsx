@@ -5,6 +5,7 @@ import {
   LAUNDRY_STAGES,
   TOTAL_ANNUAL_WASHES,
   getStudentActiveBag,
+  startStorePolling,
   getStudentHistory,
   getFacilityTraffic,
   getStudentWashQuota,
@@ -30,6 +31,9 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
   const [showSubmitBagModal, setShowSubmitBagModal] = useState(false);
   const [submitTotalItems, setSubmitTotalItems] = useState(6);
   const [submitNotes, setSubmitNotes] = useState('');
+
+  // Pull live data from the API and keep it fresh
+  useEffect(() => startStorePolling(), []);
 
   // Load student data, facility traffic & academic year wash quota
   const refreshData = () => {

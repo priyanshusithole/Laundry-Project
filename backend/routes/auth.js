@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hostel_laundry_jwt_secret_key_2026';
+const { getSecret } = require('../middleware/auth');
 
 // POST /api/auth/register (Student Registration)
 router.post('/register', async (req, res) => {
@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       { id: newUser._id, identifier: newUser.identifier, role: newUser.role },
-      JWT_SECRET,
+      getSecret(),
       { expiresIn: '7d' }
     );
 
@@ -71,7 +71,11 @@ router.post('/login', async (req, res) => {
     }
 
     const cleanId = identifier.trim().toUpperCase();
-    const user = await User.findOne({ identifier: cleanId, role: role || 'student' });
+    const wantedRole = role === 'staff' ? 'staff' : 'student';
+    // Students may sign in with their Card ID or USN; staff with their Employee ID
+    const user = wantedRole === 'staff'
+      ? await User.findOne({ identifier: cleanId, role: 'staff' })
+      : await User.findOne({ role: 'student', $or: [{ identifier: cleanId }, { usn: cleanId }, { cardId: identifier.trim() }] });
     if (!user) {
       return res.status(401).json({ error: 'Invalid ID or credentials.' });
     }
@@ -83,7 +87,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, identifier: user.identifier, role: user.role },
-      JWT_SECRET,
+      getSecret(),
       { expiresIn: '7d' }
     );
 
