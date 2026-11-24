@@ -138,13 +138,13 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
 
   // Live Camera Scanner Lifecycle
   useEffect(() => {
-    let qrScanner = null;
+    let timer = null;
 
     if (cameraScanning) {
       setCameraError('');
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         try {
-          qrScanner = new Html5Qrcode('interactive-qr-scanner');
+          const qrScanner = new Html5Qrcode('interactive-qr-scanner');
           html5QrCodeRef.current = qrScanner;
 
           const config = {
@@ -174,22 +174,26 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
         }
       }, 150);
 
-      return () => {
-        clearTimeout(timer);
-        if (qrScanner && qrScanner.isScanning) {
-          qrScanner.stop().then(() => {
-            qrScanner.clear();
-          }).catch(err => console.error('Error stopping QR scanner:', err));
-        }
-      };
-    } else {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop().then(() => {
-          html5QrCodeRef.current.clear();
-          html5QrCodeRef.current = null;
-        }).catch(() => {});
-      }
     }
+
+    // Single stop path (runs on Stop click, effect re-run, and unmount). Stopping twice makes
+    // html5-qrcode throw "Cannot transition to a new state, already under transition"
+    // synchronously, which crashed React. Take the scanner out of the ref first, and guard everything.
+    return () => {
+      clearTimeout(timer);
+      const scanner = html5QrCodeRef.current;
+      html5QrCodeRef.current = null;
+      if (!scanner) return;
+      try {
+        if (scanner.isScanning) {
+          scanner.stop()
+            .then(() => { try { scanner.clear(); } catch { /* ignore */ } })
+            .catch(() => {});
+        }
+      } catch {
+        /* scanner mid-transition; ignore */
+      }
+    };
   }, [cameraScanning]);
 
   // Support ESC key to close modals
@@ -431,16 +435,20 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
 
               {/* Viewfinder Window (Live Camera or Standby Visual) */}
               <div className="swiss-viewfinder-box">
-                {cameraScanning ? (
-                  <div className="swiss-camera-stream-wrapper">
-                    <div id="interactive-qr-scanner" className="swiss-qr-video-container"></div>
-                    <div className="swiss-scanner-crosshair top-left"></div>
-                    <div className="swiss-scanner-crosshair top-right"></div>
-                    <div className="swiss-scanner-crosshair bottom-left"></div>
-                    <div className="swiss-scanner-crosshair bottom-right"></div>
-                    <div className="swiss-scanner-laser"></div>
-                  </div>
-                ) : (
+                {/* The scanner container stays mounted (only hidden): html5-qrcode injects its own
+                    DOM nodes into it, so React must never unmount/remove it while the library owns it. */}
+                <div
+                  className="swiss-camera-stream-wrapper"
+                  style={{ display: cameraScanning ? undefined : 'none' }}
+                >
+                  <div id="interactive-qr-scanner" className="swiss-qr-video-container"></div>
+                  <div className="swiss-scanner-crosshair top-left"></div>
+                  <div className="swiss-scanner-crosshair top-right"></div>
+                  <div className="swiss-scanner-crosshair bottom-left"></div>
+                  <div className="swiss-scanner-crosshair bottom-right"></div>
+                  <div className="swiss-scanner-laser"></div>
+                </div>
+                {!cameraScanning && (
                   <div className="swiss-viewfinder-lens">
                     <div className="swiss-scanner-crosshair top-left"></div>
                     <div className="swiss-scanner-crosshair top-right"></div>
