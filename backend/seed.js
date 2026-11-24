@@ -1,12 +1,11 @@
-const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
-const User = require('./models/User');
-const { LaundryBag } = require('./models/LaundryBag');
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/hostel_laundry';
+const connectDB = require('./config/db');
+const User = require('./models/User');
+const Bag = require('./models/LaundryBag');
 
 const SEED_STUDENTS = [
   { cardId: '1077', usn: 'ENG24CY0189', name: 'Alex Morgan', room: 'Wing 2 - Room 302' },
@@ -164,40 +163,40 @@ const SEED_BAGS = [
 
 async function seed() {
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log('[SEED] Connected to MongoDB.');
+    const pool = await connectDB();
+    console.log('[SEED] Connected to Postgres.');
 
-    await User.deleteMany({});
-    await LaundryBag.deleteMany({});
-    console.log('[SEED] Cleared existing users and bags.');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('TRUNCATE users, bags RESTART IDENTITY');
+      console.log('[SEED] Cleared existing users and bags.');
 
-    const defaultPass = await bcrypt.hash(process.env.SEED_PASSWORD || 'password123', 10);
+      const defaultPass = await bcrypt.hash(process.env.SEED_PASSWORD || 'password123', 10);
 
-    for (const s of SEED_STUDENTS) {
-      await User.create({
-        role: 'student',
-        identifier: s.cardId,
-        cardId: s.cardId,
-        usn: s.usn,
-        name: s.name,
-        room: s.room,
-        password: defaultPass
-      });
+      for (const s of SEED_STUDENTS) {
+        await User.create({
+          role: 'student', identifier: s.cardId, cardId: s.cardId, usn: s.usn,
+          name: s.name, room: s.room, password: defaultPass
+        }, client);
+      }
+      for (const st of SEED_STAFF) {
+        await User.create({ role: 'staff', identifier: st.identifier, name: st.name, password: defaultPass }, client);
+      }
+      // Oldest first so created_at ordering puts the newest seeded bag on top
+      for (const b of [...SEED_BAGS].reverse()) {
+        await Bag.create(b, client);
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
 
-    for (const st of SEED_STAFF) {
-      await User.create({
-        role: 'staff',
-        identifier: st.identifier,
-        name: st.name,
-        password: defaultPass
-      });
-    }
-
-    await LaundryBag.insertMany(SEED_BAGS);
     console.log('[SEED] Successfully seeded default students, staff, and initial bags.');
-
-    await mongoose.disconnect();
+    await pool.end();
     console.log('[SEED] Done.');
   } catch (err) {
     console.error('[SEED] Error seeding data:', err);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { LaundryBag } = require('../models/LaundryBag');
+const Bag = require('../models/LaundryBag');
 const { requireAuth, requireStaff } = require('../middleware/auth');
 
 router.use(requireAuth);
@@ -8,18 +8,19 @@ router.use(requireAuth);
 // GET /api/telemetry/metrics (KPI Cards for Staff Dashboard)
 router.get('/metrics', requireStaff, async (req, res) => {
   try {
-    const allBags = await LaundryBag.find();
-    const activeBags = allBags.filter(b => b.stage !== 'Collected');
+    const c = await Bag.countByStage();
+    const n = (stage) => c[stage] || 0;
+    const total = Object.values(c).reduce((x, y) => x + y, 0);
 
     res.json({
-      totalActive: activeBags.length,
-      submitted: allBags.filter(b => b.stage === 'Submitted').length,
-      received: allBags.filter(b => b.stage === 'Received').length,
-      washing: allBags.filter(b => b.stage === 'Washing').length,
-      drying: allBags.filter(b => b.stage === 'Drying').length,
-      ironing: allBags.filter(b => b.stage === 'Ironing/Folding').length,
-      ready: allBags.filter(b => b.stage === 'Ready for Collection').length,
-      collectedToday: allBags.filter(b => b.stage === 'Collected').length
+      totalActive: total - n('Collected'),
+      submitted: n('Submitted'),
+      received: n('Received'),
+      washing: n('Washing'),
+      drying: n('Drying'),
+      ironing: n('Ironing/Folding'),
+      ready: n('Ready for Collection'),
+      collectedToday: n('Collected')
     });
   } catch (err) {
     console.error('Telemetry metrics error:', err);
@@ -30,7 +31,7 @@ router.get('/metrics', requireStaff, async (req, res) => {
 // GET /api/telemetry/traffic (Queue load & Turnaround estimate)
 router.get('/traffic', async (req, res) => {
   try {
-    const activeCount = await LaundryBag.countDocuments({ stage: { $ne: 'Collected' } });
+    const activeCount = await Bag.countActive();
 
     let trafficLevel = 'Low Traffic';
     let trafficClass = 'low';

@@ -193,12 +193,25 @@ export function getBagById(bagId) {
   );
   if (directMatch) return directMatch;
   
-  return bags.find(b =>
+  // Permanent student QR (card ID): resolve to the student's active wash, else their latest one
+  const studentBags = bags.filter(b =>
     (b.cardId && b.cardId.toUpperCase() === cleanId) ||
     (b.usn && b.usn.toUpperCase() === cleanId) ||
     (b.cardId && b.cardId.toUpperCase() === strippedPrefix) ||
     (b.usn && b.usn.toUpperCase() === strippedPrefix)
-  ) || null;
+  );
+  const active = studentBags.filter(b => b.stage !== 'Collected');
+  // Bags are newest-first, so the last active one is the oldest wash still in the facility
+  if (active.length) return active[active.length - 1];
+  return studentBags[0] || null;
+}
+
+/**
+ * Each student has ONE permanent QR code, tied to their Card ID, that never changes between washes.
+ * Scanning it loads whichever wash the student currently has in the facility.
+ */
+export function getPermanentQrPayload(cardId) {
+  return `HL-${(cardId || '').toString().trim().toUpperCase()}`;
 }
 
 export function getStudentBags(identifier) {

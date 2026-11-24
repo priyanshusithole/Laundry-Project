@@ -8,6 +8,7 @@ import {
   getBags,
   startStorePolling,
   getBagById,
+  getPermanentQrPayload,
   advanceBagStage,
   submitNewBag,
   getStudentWashQuota,
@@ -226,7 +227,8 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
   // Generate authentic scannable QR code data URL whenever QR modal opens
   useEffect(() => {
     if (qrPrintModalBag) {
-      const payload = qrPrintModalBag.washId || qrPrintModalBag.id;
+      // One permanent QR per student (Card ID); it is the same for every wash
+      const payload = getPermanentQrPayload(qrPrintModalBag.cardId);
       QRCode.toDataURL(payload, {
         width: 180,
         margin: 2,
@@ -1238,7 +1240,7 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
                 </button>
                 <div>
                   <span className="swiss-overline">ADMINISTRATIVE QR TAG GENERATOR</span>
-                  <h3 id="qr-modal-title" className="swiss-modal-title">Official Laundry Wash Tag</h3>
+                  <h3 id="qr-modal-title" className="swiss-modal-title">Student Permanent QR Tag</h3>
                 </div>
               </div>
               <button
@@ -1266,7 +1268,7 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
                 {modalQrDataUrl ? (
                   <img
                     src={modalQrDataUrl}
-                    alt={`Scannable QR Code for Wash #${qrPrintModalBag.washId || qrPrintModalBag.id}`}
+                    alt={`Permanent scannable QR code for Card ID ${qrPrintModalBag.cardId}`}
                     className="swiss-real-qr-code"
                     width="180"
                     height="180"
@@ -1275,8 +1277,9 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
                   <div className="swiss-qr-generating">Generating scannable QR code...</div>
                 )}
 
-                <span className="swiss-qr-tag-id mono strong">{qrPrintModalBag.washId || qrPrintModalBag.id}</span>
-                <span className="swiss-table-subtext mono">{qrPrintModalBag.qrCode}</span>
+                <span className="swiss-qr-tag-id mono strong">{qrPrintModalBag.cardId}</span>
+                <span className="swiss-table-subtext mono">{getPermanentQrPayload(qrPrintModalBag.cardId)}</span>
+                <span className="swiss-table-subtext">Same QR for every wash of this student</span>
               </div>
 
               <div className="swiss-qr-tag-meta-list">
@@ -1330,7 +1333,7 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
               {modalQrDataUrl && (
                 <a
                   href={modalQrDataUrl}
-                  download={`wash-qr-${qrPrintModalBag.washId || qrPrintModalBag.id}.png`}
+                  download={`student-qr-${qrPrintModalBag.cardId}.png`}
                   className="swiss-btn swiss-btn-secondary"
                   title="Download scannable QR code image for phone transfer or testing"
                 >

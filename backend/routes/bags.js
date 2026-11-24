@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { LaundryBag, LAUNDRY_STAGES } = require('../models/LaundryBag');
+const Bag = require('../models/LaundryBag');
+const { LAUNDRY_STAGES } = Bag;
 const { requireAuth, requireStaff } = require('../middleware/auth');
 
 router.use(requireAuth);
-
-const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Students can only see/act on their own bags; staff can access everything
 const canAccessCard = (req, cardId) => req.user.role === 'staff' || req.user.identifier === String(cardId).toUpperCase();
@@ -21,35 +20,23 @@ function getNextStage(current) {
 router.get('/', async (req, res) => {
   try {
     const { stage, cardId, search } = req.query;
-    let query = {};
+    const filter = {};
 
     if (stage) {
-      if (stage === 'ALL_ACTIVE') {
-        query.stage = { $ne: 'Collected' };
-      } else {
-        query.stage = stage;
-      }
+      if (stage === 'ALL_ACTIVE') filter.notStage = 'Collected';
+      else filter.stage = stage;
     }
 
     if (req.user.role !== 'staff') {
       // Students only ever see their own bags
-      query.cardId = req.user.identifier;
+      filter.cardId = req.user.identifier;
     } else if (cardId) {
-      query.cardId = cardId.toString().trim();
+      filter.cardId = cardId.toString().trim();
     }
 
-    if (search) {
-      const regex = new RegExp(escapeRegex(search.trim()), 'i');
-      query.$or = [
-        { washId: regex },
-        { studentName: regex },
-        { usn: regex },
-        { qrCode: regex }
-      ];
-    }
+    if (search) filter.search = search.trim();
 
-    const bags = await LaundryBag.find(query).sort({ createdAt: -1 });
-    res.json(bags);
+    res.json(await Bag.list(filter));
   } catch (err) {
     console.error('Fetch bags error:', err);
     res.status(500).json({ error: 'Failed to fetch laundry bags.' });
@@ -62,17 +49,15 @@ router.get('/:id', async (req, res) => {
     const queryId = req.params.id.trim();
     
     // Check direct washId
-    let bag = await LaundryBag.findOne({ washId: queryId });
+    let bag = await Bag.findByWashId(queryId);
     if (!bag) {
       // Check qrCode payload (e.g. "HL-1077-2")
-      bag = await LaundryBag.findOne({ qrCode: queryId });
+      bag = await Bag.findByQrCode(queryId);
     }
     if (!bag) {
-      // Check active bag for permanent card ID
-      bag = await LaundryBag.findOne({ cardId: queryId, stage: { $ne: 'Collected' } });
-    }
-    if (!bag && queryId.match(/^[0-9a-fA-F]{24}$/)) {
-      bag = await LaundryBag.findById(queryId);
+      // Permanent student QR ("HL-<cardId>") or a bare card ID -> the student's active bag
+      const cardId = queryId.replace(/^HL-/i, '');
+      bag = await Bag.findActiveByCardId(cardId);
     }
 
     if (!bag || !canAccessCard(req, bag.cardId)) {
@@ -99,7 +84,7 @@ router.post('/', async (req, res) => {
     }
 
     // Count existing washes for this student's card
-    const existingCount = await LaundryBag.countDocuments({ cardId: effectiveCardId });
+    const existingCount = await Bag.countByCardId(effectiveCardId);
     const washNumber = existingCount + 1;
     if (washNumber > 30) {
       return res.status(403).json({ error: 'Annual wash quota exhausted (30 of 30 washes used).' });
@@ -115,7 +100,7 @@ router.post('/', async (req, res) => {
 
     const count = Math.min(30, Math.max(1, parseInt(totalItems, 10) || 5));
 
-    const newBag = new LaundryBag({
+    const newBag = await Bag.create({
       washId,
       cardId: effectiveCardId,
       washNumber,
@@ -126,7 +111,7 @@ router.post('/', async (req, res) => {
       stage: 'Submitted',
       totalItems: count,
       itemBreakdown: { clothes: count },
-      weightKg: (count * 0.45).toFixed(1),
+      weightKg: Number((count * 0.45).toFixed(1)),
       submittedAt: nowString,
       expectedAt: expectedString,
       assignedStaff: 'Intake Desk',
@@ -140,7 +125,6 @@ router.post('/', async (req, res) => {
       ]
     });
 
-    await newBag.save();
     res.status(201).json(newBag);
   } catch (err) {
     console.error('Submit bag error:', err);
@@ -158,8 +142,7 @@ router.patch('/:id/stage', requireStaff, async (req, res) => {
       return res.status(400).json({ error: `Invalid stage "${stage}".` });
     }
 
-    let bag = await LaundryBag.findOne({ washId: bagId });
-    if (!bag && /^[0-9a-fA-F]{24}$/.test(bagId)) bag = await LaundryBag.findById(bagId);
+    const bag = (await Bag.findByWashId(bagId)) || (await Bag.findById(bagId));
     if (!bag) {
       return res.status(404).json({ error: 'Laundry bag not found.' });
     }
@@ -167,23 +150,22 @@ router.patch('/:id/stage', requireStaff, async (req, res) => {
     const nextStage = stage || getNextStage(bag.stage);
     const nowString = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    bag.stage = nextStage;
-    bag.stageHistory.push({
+    const update = {
       stage: nextStage,
-      timestamp: nowString,
-      note: note || `Advanced to ${nextStage} by staff`
-    });
-
+      stageHistory: [
+        ...(bag.stageHistory || []),
+        { stage: nextStage, timestamp: nowString, note: note || `Advanced to ${nextStage} by staff` }
+      ]
+    };
     if (nextStage === 'Ready for Collection') {
-      bag.readyAt = nowString;
-      bag.pickupBin = bag.pickupBin || 'Wing 2 Counter - Shelf ' + Math.floor(10 + Math.random() * 40);
+      update.readyAt = nowString;
+      update.pickupBin = bag.pickupBin || 'Wing 2 Counter - Shelf ' + Math.floor(10 + Math.random() * 40);
     }
     if (nextStage === 'Collected') {
-      bag.collectedAt = nowString;
+      update.collectedAt = nowString;
     }
 
-    await bag.save();
-    res.json(bag);
+    res.json(await Bag.updateStage(bag._id, update));
   } catch (err) {
     console.error('Stage update error:', err);
     res.status(500).json({ error: 'Failed to update workflow stage.' });

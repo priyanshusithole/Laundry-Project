@@ -9,6 +9,7 @@ import {
   getStudentHistory,
   getFacilityTraffic,
   getStudentWashQuota,
+  getPermanentQrPayload,
   findStudent,
   submitNewBag
 } from '../utils/laundryStore';
@@ -56,10 +57,10 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
     return () => window.removeEventListener('laundry_store_updated', handleUpdate);
   }, [activeUser]);
 
-  // Generate authentic scannable QR code data URL for active bag
+  // Generate the student's ONE permanent QR code (tied to their Card ID, same for every wash)
   useEffect(() => {
-    if (activeBag) {
-      const codePayload = activeBag.washId || activeBag.id;
+    if (washQuota.cardId) {
+      const codePayload = getPermanentQrPayload(washQuota.cardId);
       QRCode.toDataURL(codePayload, {
         width: 180,
         margin: 2,
@@ -76,7 +77,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
     } else {
       setStudentQrDataUrl('');
     }
-  }, [activeBag?.id, activeBag?.washId]);
+  }, [washQuota.cardId]);
 
   // Support ESC key to close any open modal
   useEffect(() => {
@@ -256,8 +257,8 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                   </svg>
                   <span>Show QR Pass</span>
                 </button>
-                <span className="swiss-qr-pass-label">WASH BARCODE</span>
-                <span className="swiss-qr-pass-code mono">{activeBag.qrCode}</span>
+                <span className="swiss-qr-pass-label">PERMANENT QR</span>
+                <span className="swiss-qr-pass-code mono">{getPermanentQrPayload(washQuota.cardId)}</span>
               </div>
             </section>
           )}
@@ -298,7 +299,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                         <rect x="14" y="14" width="7" height="7"></rect>
                         <rect x="3" y="14" width="7" height="7"></rect>
                       </svg>
-                      <span>View Bag QR Pass</span>
+                      <span>View My QR Pass</span>
                     </button>
                     <span className={`swiss-stage-pill stage-${activeBag.stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>
                       Current Stage: {activeBag.stage}
@@ -433,6 +434,14 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                   <p className="swiss-empty-desc">
                     You currently do not have a laundry bag in the facility cycle. Submit your clothes bag details below to register your wash and generate an official scannable Wash QR Pass for counter drop-off.
                   </p>
+                  <button
+                    type="button"
+                    className="swiss-btn swiss-btn-secondary"
+                    onClick={() => setShowStudentQrModal(true)}
+                    style={{ marginTop: 'var(--space-3)' }}
+                  >
+                    <span>View My QR Pass</span>
+                  </button>
                   {washQuota.remaining > 0 ? (
                     <button
                       type="button"
@@ -694,7 +703,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
       {/* =========================================================================
           STUDENT DIGITAL WASH QR PASS MODAL
           ========================================================================= */}
-      {showStudentQrModal && activeBag && (
+      {showStudentQrModal && (
         <div
           className="swiss-modal-overlay"
           role="dialog"
@@ -720,7 +729,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                 </button>
                 <div>
                   <span className="swiss-overline">STUDENT DIGITAL PASS</span>
-                  <h3 id="student-qr-title" className="swiss-modal-title">Official Wash QR Pass</h3>
+                  <h3 id="student-qr-title" className="swiss-modal-title">My Permanent QR Pass</h3>
                 </div>
               </div>
               <button
@@ -747,7 +756,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                 {studentQrDataUrl ? (
                   <img
                     src={studentQrDataUrl}
-                    alt={`Scannable QR Pass for Wash #${activeBag.washId || activeBag.id}`}
+                    alt={`Your permanent scannable QR pass (Card ID ${washQuota.cardId})`}
                     className="swiss-real-qr-code"
                     width="180"
                     height="180"
@@ -755,38 +764,37 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
                 ) : (
                   <div className="swiss-qr-generating">Generating scannable QR code...</div>
                 )}
-                <span className="swiss-qr-tag-id mono strong">{activeBag.washId || activeBag.id}</span>
-                <span className="swiss-table-subtext mono">{activeBag.qrCode}</span>
+                <span className="swiss-qr-tag-id mono strong">{washQuota.cardId}</span>
+                <span className="swiss-table-subtext mono">{getPermanentQrPayload(washQuota.cardId)}</span>
+                <span className="swiss-table-subtext">One QR for every wash. Show it at the counter each time.</span>
               </div>
 
               <div className="swiss-qr-tag-meta-list">
                 <div className="swiss-qr-tag-meta-row">
-                  <span className="label">Wash ID</span>
-                  <span className="val mono strong highlight-wash-id">{activeBag.washId || activeBag.id}</span>
-                </div>
-                <div className="swiss-qr-tag-meta-row">
                   <span className="label">Permanent Card ID</span>
-                  <span className="val mono">{activeBag.cardId || washQuota.cardId}</span>
-                </div>
-                <div className="swiss-qr-tag-meta-row">
-                  <span className="label">Annual Allocation</span>
-                  <span className="val mono">Wash #{activeBag.washNumber || washQuota.used} of {TOTAL_ANNUAL_WASHES}</span>
+                  <span className="val mono strong highlight-wash-id">{washQuota.cardId}</span>
                 </div>
                 <div className="swiss-qr-tag-meta-row">
                   <span className="label">Student USN</span>
-                  <span className="val mono">{activeBag.usn || washQuota.usn}</span>
+                  <span className="val mono">{washQuota.usn}</span>
                 </div>
                 <div className="swiss-qr-tag-meta-row">
                   <span className="label">Resident Name</span>
-                  <span className="val">{activeBag.studentName || washQuota.studentName}</span>
+                  <span className="val">{washQuota.studentName}</span>
                 </div>
                 <div className="swiss-qr-tag-meta-row">
                   <span className="label">Hostel Room</span>
-                  <span className="val">{activeBag.room || washQuota.room}</span>
+                  <span className="val">{washQuota.room}</span>
                 </div>
                 <div className="swiss-qr-tag-meta-row">
-                  <span className="label">Current Stage</span>
-                  <span className="val strong">{activeBag.stage}</span>
+                  <span className="label">Annual Allocation</span>
+                  <span className="val mono">{washQuota.used} of {TOTAL_ANNUAL_WASHES} washes used</span>
+                </div>
+                <div className="swiss-qr-tag-meta-row">
+                  <span className="label">Current Wash</span>
+                  <span className="val strong">
+                    {activeBag ? `${activeBag.washId || activeBag.id} (${activeBag.stage})` : 'No active wash'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -806,7 +814,7 @@ export default function StudentDashboard({ activeUser, onSignOut }) {
               {studentQrDataUrl && (
                 <a
                   href={studentQrDataUrl}
-                  download={`student-wash-qr-${activeBag.washId || activeBag.id}.png`}
+                  download={`student-qr-${washQuota.cardId}.png`}
                   className="swiss-btn swiss-btn-primary"
                   title="Download scannable QR code image for phone transfer or testing"
                 >

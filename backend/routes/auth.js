@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+
 const { getSecret } = require('../middleware/auth');
 
 // POST /api/auth/register (Student Registration)
@@ -18,7 +19,7 @@ router.post('/register', async (req, res) => {
     }
 
     const identifier = (cardId || usn).trim().toUpperCase();
-    const existing = await User.findOne({ identifier });
+    const existing = await User.findByIdentifier(identifier);
     if (existing) {
       return res.status(409).json({ error: 'Account already exists for this ID.' });
     }
@@ -26,7 +27,7 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    const newUser = await User.create({
       role: 'student',
       identifier,
       cardId: cardId ? cardId.trim() : identifier,
@@ -36,10 +37,9 @@ router.post('/register', async (req, res) => {
       password: hashedPassword
     });
 
-    await newUser.save();
 
     const token = jwt.sign(
-      { id: newUser._id, identifier: newUser.identifier, role: newUser.role },
+      { id: newUser.id, identifier: newUser.identifier, role: newUser.role },
       getSecret(),
       { expiresIn: '7d' }
     );
@@ -57,6 +57,9 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Account already exists for this ID.' });
+    }
     console.error('Registration error:', err);
     res.status(500).json({ error: 'Server error during registration.' });
   }
@@ -74,8 +77,8 @@ router.post('/login', async (req, res) => {
     const wantedRole = role === 'staff' ? 'staff' : 'student';
     // Students may sign in with their Card ID or USN; staff with their Employee ID
     const user = wantedRole === 'staff'
-      ? await User.findOne({ identifier: cleanId, role: 'staff' })
-      : await User.findOne({ role: 'student', $or: [{ identifier: cleanId }, { usn: cleanId }, { cardId: identifier.trim() }] });
+      ? await User.findStaff(cleanId)
+      : await User.findStudentForLogin(cleanId, identifier.trim());
     if (!user) {
       return res.status(401).json({ error: 'Invalid ID or credentials.' });
     }
@@ -86,7 +89,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, identifier: user.identifier, role: user.role },
+      { id: user.id, identifier: user.identifier, role: user.role },
       getSecret(),
       { expiresIn: '7d' }
     );
