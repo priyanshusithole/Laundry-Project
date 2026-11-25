@@ -163,10 +163,16 @@ export default function StaffDashboard({ activeUser, onSignOut }) {
           const qrScanner = new Html5Qrcode('interactive-qr-scanner');
           html5QrCodeRef.current = qrScanner;
 
+          // Scan the whole frame (no small qrbox) so a QR shown on a phone screen is found at any
+          // distance, prefer the browser's native detector, and ask for an HD camera stream.
           const config = {
-            fps: 15,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1.0
+            fps: 10,
+            useBarCodeDetectorIfSupported: true,
+            videoConstraints: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
           };
 
           qrScanner.start(
